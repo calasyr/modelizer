@@ -1,0 +1,13 @@
+<html>
+	<h3>Modelizer found <%= @readable_apps.size %> Rails apps in <%= @apps_dir_path %></h3>
+
+	<% if @readable_apps.size > 0 %>
+		<ul>
+		<% @readable_apps.each do |application| %>
+		  <li><%= link_to application, controller: 'databases', action: 'show', application: application %></li>
+		<% end %>
+		</ul>
+
+		<p>Click an application and Modelizer will show you its models and possible associations you can create.</h3>
+	<% end %>
+</html>

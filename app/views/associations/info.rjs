@@ -1,0 +1,7 @@
+page.replace_html( "info", :partial => "conventions") if @partial == "conventions"
+page.replace_html( "info", :partial => "default") if @effect == "blind_up"
+
+page[:info].visual_effect :blind_down if @effect == "display"
+
+
+

@@ -1,0 +1,59 @@
+<% if @table != nil %>
+  <h3><%= @table %></h3>
+  <% if @associatable_column_names.length > 0 %>
+    <p>
+      From the way tables and columns are named in this schema, it appears that 
+      each record in the <b><%= @table %></b> table can be associated with records 
+      in <%= @associatable_column_names.length %> other tables.  But Rails doesn't 
+      assume these relationships; you have to specify them in the model file for 
+      each table.
+    </p>
+
+    <ol>
+      <% @associatable_column_names.each do |name| %>
+        <li>
+          <p>
+            Because there is a <%= name[1].singularize %>_id column in the <%= @table %> 
+            table, it looks like each <b><%= @table.singularize %></b> belongs to 
+            a particular <b><%= name[1].singularize %></b>.
+          </p>
+ 
+          <ul>
+            <li>
+              <p>
+                If you want Rails to know that each <b><%= @table.singularize %></b> 
+                belongs to a particular <b><%= name[1].singularize %></b>, add this 
+                method call to <b><%= @table.singularize %>.rb</b>:
+              </p>
+    
+              <p>belongs_to :<%= name[1].singularize %></p>
+            </li>          
+            <li>
+              <p>
+                A <b><%= name[1].singularize %></b> can have many <b><%= @table %></b> 
+                or just one. If you want Rails to know that each <b><%= name[1].singularize %></b> 
+                can have only one <b><%= @table.singularize %></b>, add this method call to 
+                <b><%= name[1].singularize %>.rb</b>:
+              </p>
+          
+              <p>has_one :<%= @table.singularize %></p>
+            </li>          
+            <li>
+              <p>
+                If you want Rails to know that each <b><%= name[1].singularize %></b> 
+                can have many <b><%= @table %></b>, add this method call to 
+                <b><%= name[1].singularize %>.rb</b>:
+              </p>
+    
+              <p>has_many :<%= @table %></p>
+            </li>          
+          </ul>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    There are no "associatable" columns in the <b><%= @table %></b> table.
+  <% end %>
+<% else %>
+  There is no such table.
+<% end %>

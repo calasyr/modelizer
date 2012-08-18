@@ -1,0 +1,10 @@
+<%- if button_set.length > 0 -%>
+  <div>
+    <% button_set.each do |this_button| %>
+      <td>
+        <%= submit_tag this_button[:table], :class => "table_button",
+                       :table => this_button[:table], :application => @application %>
+      </td>
+    <% end %>
+  </div>
+<% end %>
