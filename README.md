@@ -1,0 +1,1 @@
+Modelizer is a simple tool for finding potential ActiveRecord associations between your Rails models.
