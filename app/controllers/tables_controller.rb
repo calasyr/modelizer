@@ -11,8 +11,5 @@ class TablesController < ApplicationController
     get_associations(@table, @tables, counter)
   end
 
-  def info
-    @partial = params['partial']
-    @effect = params['effect']
   end
 end
