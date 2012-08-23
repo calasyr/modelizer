@@ -16,7 +16,7 @@
 
 $(document).ready(function() {
   $('.table_button').bind('click', function() {
-    var url = "/tables/show?application=" + $(this).attr("application") + 
+    var url = "/associations?application=" + $(this).attr("application") + 
               "&table=" + $(this).attr("table");
 
     // Loads display_table div with this table's potential associations
