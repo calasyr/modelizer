@@ -4,7 +4,7 @@
 	<% if @readable_apps.size > 0 %>
 		<ul>
 		<% @readable_apps.each do |application| %>
-		  <li><%= link_to application, controller: 'databases', action: 'show', application: application %></li>
+		  <li><%= link_to application, controller: 'tables', action: 'index', application: application %></li>
 		<% end %>
 		</ul>
 
