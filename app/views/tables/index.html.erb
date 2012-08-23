@@ -1,0 +1,14 @@
+<h3>The development database for <%= @application %> has these tables.</h3>
+
+<div id="display_buttons">
+  <% @tables.each do |this_table| %>
+    <%= submit_tag this_table, :class => "table_button", :table => this_table, 
+                   :application => @application %>
+  <% end %>                                           
+</div>
+
+<br/>
+
+<div id="display_table">
+  Click one of the above buttons to see the corresponding table's model associations.
+</div>
