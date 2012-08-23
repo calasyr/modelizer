@@ -1,5 +1,0 @@
-page.replace_html( "display_association", :partial => "association") if @table != nil
-
-
-
-
