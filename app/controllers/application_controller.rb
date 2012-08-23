@@ -1,189 +1,84 @@
 class ApplicationController < ActionController::Base
   protect_from_forgery
-
-  # Not in use, but may use it later to detect association methods already in use
-  def find_associations(application,tables)
-
-    association_methods = ["has_many", "has_one", "belongs_to", "has_and_belongs_to_many"]
     
-    models_dir_path = apps_dir_path + "/" + application + "/app/models"
+  @@tables_to_ignore = ["schema_info", "schema_migrations", "sessions"]
+  
+  # Find the column names in each table that map to primary keys of other tables.
+  def get_associations(this_table, application)    
+    apps_tables = tables(application)
+    apps_tables.delete(this_table)
 
-    tables.each do |table|
-      model_file_path = models_dir_path + "/" + table.singularize + ".rb"
+    associations = []
 
-      if(File.readable_real?(model_file_path))
-        File.open(model_file_path, "r") do |model_file|
-          method_call_continues = false
-          
-          model_file.each_line do |line|
-            trimmed = line.trim
-            if(method_call_continues)
-              logger.info("'#{trimmed}'")
-              method_call_continues = trimmed.ends_with?(",")
-            else 
-              association_methods.each do |method|
-                if(line.include?(method))
-                  logger.info("'#{trimmed}'")
-                  method_call_continues = trimmed.ends_with?(",")
-                end
-              end
-            end
-          end
+    associatable_columns = associatable_columns(this_table, application)
+    logger.info { "associatable_columns are #{associatable_columns}" }
+    associatable_columns.each do |column|
+      apps_tables.each do |other_table|
+        if column == "#{other_table.singularize}_id"
+          associations << {name: column, table: other_table}
         end
       end
     end
-  end
-    
-  # Not in use, but may be used later to update the model file with new method calls
-  def edit_model
-    # Create an instance of the class for the specified model name and then discover its columns
-    @class_name = params[:model]
 
-    # Make sure the case is right
-    
-    if @class_name != nil 
-      model_instance = eval("#{@class_name}.new")
-    end
-
-    if @model_instance != nil 
-      @column_names = model_instance.attribute_names
-    end
-
-    # Get the associations from the file or the object
-    
+    associations
   end
 
-  def get_associations(this_table, all_tables, counter)
-    # Find the column names in each table that map to primary keys of other tables
-
-    # Identify the columns in the specified table
-    columns = get_columns(this_table)
-
-    # content_columns = eval("#{model_name}.content_columns")
-    Schema.table_name = this_table
+  def associatable_columns table, application
+    table_model = get_model(application)
+    table_model.table_name = table
     
-    Schema.establish_connection(get_db_config)
-    content_columns = Schema.content_columns
+    columns = table_model.columns
 
-    columns.each do |column|
-      # If the column IS NOT a content column and IS an integer
+    content_columns = table_model.content_columns.collect { |column| column.name }
 
-      # Ignore tbis column if its type is not integer, as it can't be an id
-      if(column.type.to_s == "integer")
-        not_content = true
-        # Ignore this column if it is one of the content columns
-        for content_column in content_columns
-          if(content_column.name == column.name)
-            not_content = false
-          end
-        end
-        if(not_content)
-          # See if a table name maps to the column name
-          @tables.each do |table_again|
-            if((table_again != "schema_info") && (table_again != @table))
-              matching_column = table_again.singularize + "_id"
-              if(matching_column == column.name)
-                @associatable_column_names[counter] = [column.name,table_again]
-                counter = counter + 1
-              end
-            end
-          end
-        end
-      end
+    # Only columns that are ids can have associations
+    columns.select! do |column|
+      column.type.to_s == 'integer' && column.name != 'id' && !content_columns.include?(column.name)
     end
-    logger.info("#{@associatable_column_names.inspect}")
+
+    columns.collect { |column| column.name }
   end
 
-  def show_table
-    @application = params['application']
-    @table = params['table']
-
-    # Identify the tables in the database for this application
-    @tables = Schema.connection.tables
-
-    # Identify the columns in the specified table
-    @columns = get_columns(@table)
-
-    @associatable_column_names = Array.new
-    counter = 0
-
-    # Find the column names in each table that map to primary keys of other tables
-
-    content_columns = eval("#{model_name}.content_columns")
-
-    @columns.each do |column|
-      # If the column IS NOT a content column and IS an integer
-
-      # Its an array of content column elements, each of which is hash of
-      # keys/values.  We need to find out if there is hash element whose key 
-      # is "name" and whose value is the column name
-
-      # Hey, if its not an integer, it can't be an id
-      if(column.type.to_s == "integer")
-        not_content = true
-        for content_column in content_columns
-          if(content_column.name == column.name)
-            not_content = false
-          end
-        end
-        if(not_content)
-          # See if a table name maps to the column name
-          @tables.each do |table_again|
-            if((table_again != "schema_info") && (table_again != @table))
-              matching_column = table_again.singularize + "_id"
-              if(matching_column == column.name)
-                @associatable_column_names[counter] = [column.name,table_again]
-                counter = counter + 1
-              end
-            end
-          end
-        end
-      end
-    end
-    logger.info("#{@associatable_column_names.inspect}")
-  end
-
-  def get_columns(table)
-    # Identify the tables in the database for this application
-    @tables = Schema.connection.tables
-    logger.info { "@tables are #{@tables}" }
-
+  def get_model(application)
+    new_model = Class.new(ActiveRecord::Base)
+    
     # Make sure the Table model is using the right db
-    Table.establish_connection(get_db_config)
-    Table.table_name = table
+    new_model.establish_connection(get_db_config(application))
 
-    logger.info { "Table.column_names = #{Table.column_names}" }
-    # Identify the columns in the specified table
-    Table.columns
+    new_model
   end
 
-  def get_db_config
-    # Build the database config file string for this app
-    db_config_file = apps_dir_path + "/" +
-                     params['application'] + "/config/database.yml"
-
-    # Get the connection information
-    db_config = YAML.load_file(db_config_file)
-
-    # We'll only be looking at development databases
-    development = db_config['development']
-
-    # Make sure the latest db adapter is used
-    development['adapter'] = 'mysql2'
-
-    development
-  end
-
-  def get_model_file_path(model_file_name)
-    FileUtils.getwd() + "/app/models/" + model_file_name + ".rb"
-  end
-
-  def get_app_model
-    @model_file_name = params['application']
-    
-    Schema.establish_connection(get_db_config)
+  def tables application
+    @application_tables ? @application_tables : get_tables(application)
   end
   
+  def get_tables application
+    # Connect to application database
+    new_model = get_model(application)
+
+    tables = new_model.connection.tables - @@tables_to_ignore
+    
+    @application_tables = tables
+  end
+    
+  def get_db_config application
+    if application
+      # Build the database config file string for this app
+      db_config_file = apps_dir_path + "/" + application + "/config/database.yml"
+
+      # Get the connection information
+      db_config = YAML.load_file(db_config_file)
+
+      # We'll only be looking at development databases
+      development = db_config['development']
+
+      # Make sure the latest db adapter is used
+      development['adapter'] = 'mysql2'
+
+      development
+    end
+  end
+
   def apps_dir_path
     @apps_dir_path ? @apps_dir_path : (@apps_dir_path = File.dirname(FileUtils.pwd))
   end
